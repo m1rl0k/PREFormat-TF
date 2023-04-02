@@ -86,49 +86,139 @@ func processTerraformFile(filename string) {
 		fmt.Printf("No changes needed for %s\n", filename)
 	}
 }
-func tokensForExpr(expr hcl.Expression) hclwrite.Tokens {
+func tokensForExpr(expr hcl.Expression, f *hcl.File) hclwrite.Tokens {
 	var tokens hclwrite.Tokens
 
 	switch expr := expr.(type) {
-	case *hclsyntax.LiteralValueExpr:
-		t := hclwrite.Token{
+	case *hcl.LiteralValueExpr:
+		tokens = append(tokens, hclwrite.Token{
 			Type:  hclwrite.TokenString,
 			Bytes: []byte(expr.Val.Raw),
-		}
-		tokens = append(tokens, t)
-	case *hclsyntax.TemplateExpr:
-		parts := expr.Parts()
+		})
+
+	case *hcl.TemplateExpr:
+		parts := expr.Parts
 		for _, part := range parts {
 			switch part := part.(type) {
-			case *hclsyntax.TemplateText:
-				t := hclwrite.Token{
+			case *hcl.TemplateExpr:
+				tokens = append(tokens, tokensForExpr(part, f)...)
+
+			case *hcl.TemplateWrapExpr:
+				tokens = append(tokens, tokensForExpr(part.Wrapped, f)...)
+
+			case *hcl.LiteralValueExpr:
+				tokens = append(tokens, hclwrite.Token{
 					Type:  hclwrite.TokenString,
-					Bytes: []byte(part.Value),
-				}
-				tokens = append(tokens, t)
-			case *hclsyntax.TemplateInterpolation:
-				for _, s := range hclsyntax.EncodeExpression(part.Expr) {
-					t := hclwrite.Token{
-						Type:  hclwrite.TokenType(s.Type),
-						Bytes: s.Bytes,
-					}
-					tokens = append(tokens, t)
-				}
+					Bytes: []byte(part.Val.Raw),
+				})
 			}
 		}
-	case *hclsyntax.RelativeTraversalExpr:
+
+	case *hcl.VariableExpr:
+		tokens = append(tokens, hclwrite.Token{
+			Type:  hclwrite.TokenDollar,
+			Bytes: []byte("$"),
+		})
+
+		attrTokens := tokensForAttr(expr, f)
+		tokens = append(tokens, attrTokens...)
+
+	case *hcl.FunctionCallExpr:
+		tokens = append(tokens, hclwrite.Token{
+			Type:  hclwrite.TokenIdent,
+			Bytes: []byte(expr.Name),
+		})
+
+		tokens = append(tokens, hclwrite.Token{
+			Type:  hclwrite.TokenOParen,
+			Bytes: []byte("("),
+		})
+
+		args := expr.Args
+		for i, arg := range args {
+			argTokens := tokensForExpr(arg.Expr, f)
+			tokens = append(tokens, argTokens...)
+
+			if i < len(args)-1 {
+				tokens = append(tokens, hclwrite.Token{
+					Type:  hclwrite.TokenComma,
+					Bytes: []byte(","),
+				})
+			}
+		}
+
+		tokens = append(tokens, hclwrite.Token{
+			Type:  hclwrite.TokenCParen,
+			Bytes: []byte(")"),
+		})
+
+	case *hcl.RelativeTraversalExpr:
 		for _, sel := range expr.Traversal {
-			if sel, ok := sel.(hclsyntax.TraverseAttr); ok {
-				t := hclwrite.Token{
-					Type:  hclwrite.TokenString,
-					Bytes: []byte(sel.Name),
-				}
-				tokens = append(tokens, t)
+			switch sel := sel.(type) {
+			case *hcl.TraverseAttr:
+				tokens = append(tokens, hclwrite.Token{
+					Type:  hclwrite.TokenDot,
+					Bytes: []byte("."),
+				})
+				tokens = append(tokens, tokensForAttr(sel, f)...)
+
+			case *hcl.TraverseIndex:
+				tokens = append(tokens, hclwrite.Token{
+					Type:  hclwrite.TokenOBrack,
+					Bytes: []byte("["),
+				})
+				indexTokens := tokensForExpr(sel.Key, f)
+				tokens = append(tokens, indexTokens...)
+				tokens = append(tokens, hclwrite.Token{
+					Type:  hclwrite.TokenCBrack,
+					Bytes: []byte("]"),
+				})
 			}
 		}
+
+	case *hclsyntax.FunctionCallExpr:
+		tokens = append(tokens, hclwrite.Token{
+			Type:  hclwrite.TokenIdent,
+			Bytes: []byte(expr.Name),
+		})
+
+		tokens = append(tokens, hclwrite.Token{
+			Type:  hclwrite.TokenOParen,
+			Bytes: []byte("("),
+		})
+
+			args := expr.Args
+		for i, arg := range args {
+			argTokens := tokensForExpr(arg, f)
+			tokens = append(tokens, argTokens...)
+
+			if i < len(args)-1 {
+				tokens = append(tokens, hclwrite.Token{
+					Type:  hclwrite.TokenComma,
+					Bytes: []byte(","),
+				})
+			}
+		}
+
+		tokens = append(tokens, hclwrite.Token{
+			Type:  hclwrite.TokenCParen,
+			Bytes: []byte(")"),
+		})
+
+	case *hcl.ForExpr:
+		return tokens
+
+	case *hcl.ConditionalExpr:
+		return tokens
+
+	default:
+		fmt.Printf("Unhandled expression type: %T\n", expr)
+		return tokens
 	}
 
 	return tokens
 }
+
+
 
 
