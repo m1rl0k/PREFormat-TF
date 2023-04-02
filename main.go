@@ -8,7 +8,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/pmezard/go-difflib/difflib"
 )
@@ -94,8 +93,6 @@ func tokensForExpr(expr hcl.Expression) hclwrite.Tokens {
 			Pos: hclwrite.Pos{
 				Filename: expr.Range().Start.Filename,
 				Offset:   int(expr.Range().Start.Byte),
-				Line:     int(expr.Range().Start.Line),
-				Column:   int(expr.Range().Start.Column),
 			},
 		},
 	}
