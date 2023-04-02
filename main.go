@@ -88,26 +88,46 @@ func processTerraformFile(filename string) {
 }
 func tokensForExpr(expr hcl.Expression) hclwrite.Tokens {
 	var tokens hclwrite.Tokens
-	syntaxNode := hclsyntax.ParseExpr(expr.(*hcl.Block).Type)
-	exprSyntaxNode, ok := syntaxNode.(*hclsyntax.ScopeTraversalExpr)
-	if !ok {
-		// If the expression is not a scope traversal, then it must be an
-		// index or attribute access. We can just return the raw expression.
-		tokens = hclwrite.Tokens{
-			{
-				Type:  hclwrite.TokenString,
-				Bytes: []byte(expr.Range().Text),
-			},
-		}
-		return tokens
-	}
-	for _, s := range hclsyntax.EncodeExpression(exprSyntaxNode) {
+
+	switch expr := expr.(type) {
+	case *hclsyntax.LiteralValueExpr:
 		t := hclwrite.Token{
-			Type:  hclwrite.TokenType(s.TokenType),
-			Bytes: s.Bytes,
+			Type:  hclwrite.TokenString,
+			Bytes: []byte(expr.Val.Raw),
 		}
 		tokens = append(tokens, t)
+	case *hclsyntax.TemplateExpr:
+		parts := expr.Parts()
+		for _, part := range parts {
+			switch part := part.(type) {
+			case *hclsyntax.TemplateText:
+				t := hclwrite.Token{
+					Type:  hclwrite.TokenString,
+					Bytes: []byte(part.Value),
+				}
+				tokens = append(tokens, t)
+			case *hclsyntax.TemplateInterpolation:
+				for _, s := range hclsyntax.EncodeExpression(part.Expr) {
+					t := hclwrite.Token{
+						Type:  hclwrite.TokenType(s.Type),
+						Bytes: s.Bytes,
+					}
+					tokens = append(tokens, t)
+				}
+			}
+		}
+	case *hclsyntax.RelativeTraversalExpr:
+		for _, sel := range expr.Traversal {
+			if sel, ok := sel.(hclsyntax.TraverseAttr); ok {
+				t := hclwrite.Token{
+					Type:  hclwrite.TokenString,
+					Bytes: []byte(sel.Name),
+				}
+				tokens = append(tokens, t)
+			}
+		}
 	}
+
 	return tokens
 }
 
