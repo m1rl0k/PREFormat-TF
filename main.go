@@ -86,15 +86,14 @@ func processTerraformFile(filename string) {
 		fmt.Printf("No changes needed for %s\n", filename)
 	}
 }
-
 func tokensForExpr(expr hcl.Expression) hclwrite.Tokens {
 	var tokens hclwrite.Tokens
 	for _, s := range hclsyntax.EncodeExpr(hclsyntax.Expr(expr).SyntaxNode()) {
 		t := hclwrite.Token{
-			Type: hclwrite.TokenString,
+			Type:  hclwrite.TokenString,
 			Bytes: s,
 		}
-		tokens = append(tokens, t)
+		tokens = append(tokens, &t)
 	}
 	return tokens
 }
