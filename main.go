@@ -117,57 +117,30 @@ func tokensForExpr(expr hcl.Expression, f *hcl.File) hclwrite.Tokens {
 	var tokens hclwrite.Tokens
 
 	switch expr := expr.(type) {
-	case *hcl.LiteralValueExpr:
-		tokens = append(tokens, hclwrite.Token{
-			Type:  hclwrite.TokenString,
-			Bytes: []byte(expr.Val.Raw),
-		})
+	case *hclsyntax.LiteralValueExpr:
+		tokens = append(tokens, hclwrite.NewToken(hclwrite.TokenString, []byte(expr.Val.Raw)))
 
-	case *hcl.TemplateExpr:
+	case *hclsyntax.TemplateExpr:
 		parts := expr.Parts
 		for _, part := range parts {
 			switch part := part.(type) {
-			case *hcl.TemplateExpr:
+			case *hclsyntax.TemplateExpr:
 				tokens = append(tokens, tokensForExpr(part, f)...)
 
-			case *hcl.TemplateWrapExpr:
+			case *hclsyntax.TemplateWrapExpr:
 				tokens = append(tokens, tokensForExpr(part.Wrapped, f)...)
 
-			case *hcl.LiteralValueExpr:
-				tokens = append(tokens, hclwrite.Token{
-					Type:  hclwrite.TokenString,
-					Bytes: []byte(part.Val.Raw),
-				})
+			case *hclsyntax.LiteralValueExpr:
+				tokens = append(tokens, hclwrite.NewToken(hclwrite.TokenString, []byte(part.Val.Raw)))
 			}
 		}
 
-	case *hcl.VariableExpr:
-		tokens = append(tokens, hclwrite.Token{
-			Type:  hclwrite.TokenDollar,
-			Bytes: []byte("$"),
-		})
+	case *hclsyntax.VariableExpr:
+		tokens = append(tokens, hclwrite.NewToken(hclwrite.TokenDollar, []byte("$")))
 
 		attrTokens := tokensForAttr(&hclsyntax.TraverseAttr{Name: expr.Name}, f)
 		tokens = append(tokens, attrTokens...)
-
-	case *hcl.FunctionCallExpr:
-		// ... handle FunctionCallExpr cases ...
-
-	case *hcl.RelativeTraversalExpr:
-		// ... handle RelativeTraversalExpr cases ...
-
-	case *hclsyntax.FunctionCallExpr:
-		// ... handle FunctionCallExpr cases ...
-
-	case *hcl.ForExpr:
-		// ... handle ForExpr cases ...
-
-	case *hcl.ConditionalExpr:
-		// ... handle ConditionalExpr cases ...
-
-	default:
-		fmt.Printf("Unhandled expression type: %T\n", expr)
-		return tokens
+	// ... rest of the cases and default ...
 	}
 
 	return tokens
