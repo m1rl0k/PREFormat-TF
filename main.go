@@ -11,8 +11,6 @@ import (
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/pmezard/go-difflib/difflib"
-        
-
 )
 
 func main() {
@@ -89,11 +87,13 @@ func processTerraformFile(filename string) {
 }
 
 func tokensForExpr(expr hcl.Expression) hclwrite.Tokens {
+	col := expr.Range().Start.Column
 	return hclwrite.Tokens{
 		{
-			Type:  hclsyntax.TokenIndent,
-			Bytes: []byte(expr.Range().Start.ColumnText),
+			Type:  hcl.Token{
+				Type: hcl.TokenIdent,
+				Bytes: []byte(fmt.Sprintf("%*s", col-1, "")),
+			},
 		},
 	}
 }
-
