@@ -34,9 +34,10 @@ func processTerraformFile(filename string) {
 		return
 	}
 
-	f, diags := hclsyntax.ParseConfig(data, filename, hcl.InitialPos)
+	parser := hclparse.NewParser()
+	f, diags := parser.ParseHCL(data, filename)
 	if diags.HasErrors() {
-		fmt.Println("Error parsing file:", filename, diags)
+		fmt.Println("Error parsing file:", filename, diags.Error())
 		return
 	}
 
@@ -45,7 +46,7 @@ func processTerraformFile(filename string) {
 
 	content, diags := f.Body.Content(&hcl.BodySchema{})
 	if diags.HasErrors() {
-		fmt.Println("Error decoding body:", filename, diags)
+		fmt.Println("Error decoding body:", filename, diags.Error())
 		return
 	}
 
@@ -86,14 +87,13 @@ func processTerraformFile(filename string) {
 }
 
 func tokensForExpr(expr hcl.Expression) hclwrite.Tokens {
-	return hclwrite.Tokens{
-		{
-			Type:  hclsyntax.TokenIdent,
-			Bytes: []byte(expr.Range().Start.ByteSlice(data)),
-			Pos: hclwrite.Pos{
-				Filename: expr.SyntaxNode().Range().Filename,
-				Offset:   int(expr.Range().Start.Byte),
-			},
-		},
+	var tokens hclwrite.Tokens
+	for _, s := range hclsyntax.EncodeExpr(expr.SyntaxNode()) {
+		t := hclwrite.Token{
+			Type: hclwrite.TokenString,
+			Bytes: s,
+		}
+		tokens = append(tokens, t)
 	}
+	return tokens
 }
