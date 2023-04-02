@@ -8,7 +8,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/hashicorp/hcl/v2"
-        "github.com/hashicorp/hcl/v2/hclparse"	
+	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/pmezard/go-difflib/difflib"
@@ -38,7 +38,7 @@ func processTerraformFile(filename string) {
 	parser := hclparse.NewParser()
 	f, diags := parser.ParseHCL(data, filename)
 	if diags.HasErrors() {
-		fmt.Println("Error parsing file:", filename, diags.Error())
+		fmt.Println("Error parsing file:", filename, diags)
 		return
 	}
 
@@ -47,21 +47,24 @@ func processTerraformFile(filename string) {
 
 	content, diags := f.Body.Content(&hcl.BodySchema{})
 	if diags.HasErrors() {
-		fmt.Println("Error decoding body:", filename, diags.Error())
+		fmt.Println("Error decoding body:", filename, diags)
 		return
 	}
 
 	for name, attr := range content.Attributes {
-		tokens := tokensForExpr(attr.Expr)
+		tokens := tokensForExpr(attr.Expr, f)
 		newBody.SetAttributeRaw(name, tokens)
 	}
 
 	for _, block := range content.Blocks {
-		newBlock := newBody.AppendNewBlock(block.Type, block.Labels)
+		newBlock := newBody.AppendNewBlock(block.Type, block.Labels, nil)
 		blockContent, _ := block.Body.Content(&hcl.BodySchema{})
 		for name, bAttr := range blockContent.Attributes {
-			tokens := tokensForExpr(bAttr.Expr)
+			tokens := tokensForExpr(bAttr.Expr, f)
 			newBlock.Body().SetAttributeRaw(name, tokens)
+		}
+		for _, subBlock := range blockContent.Blocks {
+			writeBlock(subBlock, newBlock.Body())
 		}
 	}
 
@@ -86,44 +89,16 @@ func processTerraformFile(filename string) {
 		fmt.Printf("No changes needed for %s\n", filename)
 	}
 }
-func writeBlock(block *hcl.Block) hclwrite.Block {
-	body := hclwrite.NewBody()
-	body.AppendNewline()
 
-	blockType := block.Type
-	blockTypeToken := hclwrite.Token{
-		Type:  hclwrite.TokenIdent,
-		Bytes: []byte(blockType),
+func writeBlock(block *hcl.Block, body *hclwrite.Body) {
+	newBlock := body.AppendNewBlock(block.Type, block.Labels, nil)
+	blockContent, _ := block.Body.Content(&hcl.BodySchema{})
+	for name, bAttr := range blockContent.Attributes {
+		tokens := tokensForExpr(bAttr.Expr, nil)
+		newBlock.Body().SetAttributeRaw(name, tokens)
 	}
-	body.Append(blockTypeToken)
-
-	label := block.Labels[0]
-	if len(label) > 0 {
-		labelTokens := tokensForLabel(label)
-		body.AppendTokens(labelTokens)
-	}
-
-	body.AppendNewline()
-	body.AppendString("{")
-	body.AppendNewline()
-
-	for _, block := range block.Blocks {
-		childBlock := writeBlock(block)
-		body.AppendBlock(childBlock)
-	}
-
-	for _, attr := range block.Attributes {
-		attrTokens := tokensForAttr(attr, nil)
-		body.AppendTokens(attrTokens)
-	}
-
-	body.AppendString("}")
-	body.AppendNewline()
-
-	return hclwrite.Block{
-		Labels: block.Labels,
-		Type:   block.Type,
-		Body:   body,
+	for _, subBlock := range blockContent.Blocks {
+		writeBlock(subBlock, newBlock.Body())
 	}
 }
 
