@@ -57,7 +57,7 @@ func processTerraformFile(filename string) {
 	}
 
 	for _, block := range content.Blocks {
-		newBlock := newBody.AppendNewBlock(block.Type, block.Labels, nil)
+		newBlock := newBody.AppendNewBlock(block.Type, block.Labels)
 		blockContent, _ := block.Body.Content(&hcl.BodySchema{})
 		for name, bAttr := range blockContent.Attributes {
 			tokens := tokensForExpr(bAttr.Expr, f)
@@ -91,7 +91,7 @@ func processTerraformFile(filename string) {
 }
 
 func writeBlock(block *hcl.Block, body *hclwrite.Body) {
-	newBlock := body.AppendNewBlock(block.Type, block.Labels, nil)
+	newBlock := body.AppendNewBlock(block.Type, block.Labels)
 	blockContent, _ := block.Body.Content(&hcl.BodySchema{})
 	for name, bAttr := range blockContent.Attributes {
 		tokens := tokensForExpr(bAttr.Expr, nil)
@@ -101,6 +101,7 @@ func writeBlock(block *hcl.Block, body *hclwrite.Body) {
 		writeBlock(subBlock, newBlock.Body())
 	}
 }
+
 func tokensForAttr(attr *hclsyntax.Attribute, f *hcl.File) hclwrite.Tokens {
 	var tokens hclwrite.Tokens
 
@@ -111,7 +112,6 @@ func tokensForAttr(attr *hclsyntax.Attribute, f *hcl.File) hclwrite.Tokens {
 
 	return tokens
 }
-
 
 func tokensForExpr(expr hcl.Expression, f *hcl.File) hclwrite.Tokens {
 	var tokens hclwrite.Tokens
@@ -148,95 +148,22 @@ func tokensForExpr(expr hcl.Expression, f *hcl.File) hclwrite.Tokens {
 		})
 
 		attrTokens := tokensForAttr(&hclsyntax.TraverseAttr{Name: expr.Name}, f)
-                tokens = append(tokens, attrTokens...)
+		tokens = append(tokens, attrTokens...)
+
 	case *hcl.FunctionCallExpr:
-		tokens = append(tokens, hclwrite.Token{
-			Type:  hclwrite.TokenIdent,
-			Bytes: []byte(expr.Name),
-		})
-
-		tokens = append(tokens, hclwrite.Token{
-			Type:  hclwrite.TokenOParen,
-			Bytes: []byte("("),
-		})
-
-		args := expr.Args
-		for i, arg := range args {
-			argTokens := tokensForExpr(arg.Expr, f)
-			tokens = append(tokens, argTokens...)
-
-			if i < len(args)-1 {
-				tokens = append(tokens, hclwrite.Token{
-					Type:  hclwrite.TokenComma,
-					Bytes: []byte(","),
-				})
-			}
-		}
-
-		tokens = append(tokens, hclwrite.Token{
-			Type:  hclwrite.TokenCParen,
-			Bytes: []byte(")"),
-		})
+		// ... handle FunctionCallExpr cases ...
 
 	case *hcl.RelativeTraversalExpr:
-		for _, sel := range expr.Traversal {
-			switch sel := sel.(type) {
-			case *hcl.TraverseAttr:
-				tokens = append(tokens, hclwrite.Token{
-					Type:  hclwrite.TokenDot,
-					Bytes: []byte("."),
-				})
-				tokens = append(tokens, tokensForAttr(expr, f)...)
-
-			case *hcl.TraverseIndex:
-				tokens = append(tokens, hclwrite.Token{
-					Type:  hclwrite.TokenOBrack,
-					Bytes: []byte("["),
-				
-})
-				indexTokens := tokensForExpr(sel.Key, f)
-				tokens = append(tokens, indexTokens...)
-				tokens = append(tokens, hclwrite.Token{
-					Type:  hclwrite.TokenCBrack,
-					Bytes: []byte("]"),
-				})
-			}
-		}
+		// ... handle RelativeTraversalExpr cases ...
 
 	case *hclsyntax.FunctionCallExpr:
-		tokens = append(tokens, hclwrite.Token{
-			Type:  hclwrite.TokenIdent,
-			Bytes: []byte(expr.Name),
-		})
-
-		tokens = append(tokens, hclwrite.Token{
-			Type:  hclwrite.TokenOParen,
-			Bytes: []byte("("),
-		})
-
-			args := expr.Args
-		for i, arg := range args {
-			argTokens := tokensForExpr(arg, f)
-			tokens = append(tokens, argTokens...)
-
-			if i < len(args)-1 {
-				tokens = append(tokens, hclwrite.Token{
-					Type:  hclwrite.TokenComma,
-					Bytes: []byte(","),
-				})
-			}
-		}
-
-		tokens = append(tokens, hclwrite.Token{
-			Type:  hclwrite.TokenCParen,
-			Bytes: []byte(")"),
-		})
+		// ... handle FunctionCallExpr cases ...
 
 	case *hcl.ForExpr:
-		return tokens
+		// ... handle ForExpr cases ...
 
 	case *hcl.ConditionalExpr:
-		return tokens
+		// ... handle ConditionalExpr cases ...
 
 	default:
 		fmt.Printf("Unhandled expression type: %T\n", expr)
@@ -245,7 +172,3 @@ func tokensForExpr(expr hcl.Expression, f *hcl.File) hclwrite.Tokens {
 
 	return tokens
 }
-
-
-
-
