@@ -18,25 +18,30 @@ func main() {
 		os.Exit(1)
 	}
 
+	totalChanges := 0
+
 	for _, f := range files {
 		if strings.HasSuffix(f.Name(), ".tf") {
-			processTerraformFile(f.Name())
+			changes := processTerraformFile(f.Name())
+			totalChanges += changes
 		}
 	}
+
+	fmt.Printf("\n\033[1mTotal changes: %d\033[0m\n", totalChanges)
 }
 
-func processTerraformFile(filename string) {
+func processTerraformFile(filename string) int {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		fmt.Println("Error reading file:", filename, err)
-		return
+		return 0
 	}
 
 	parser := hclparse.NewParser()
 	_, diags := parser.ParseHCL(data, filename)
 	if diags.HasErrors() {
 		fmt.Println("Error parsing file:", filename, diags)
-		return
+		return 0
 	}
 
 	formattedData := hclwrite.Format(data)
@@ -50,14 +55,47 @@ func processTerraformFile(filename string) {
 			Context:  3,
 		}
 		diffStr, _ := difflib.GetUnifiedDiffString(diff)
-		fmt.Printf("\033[33m%s\033[0m", diffStr)
 
-		fmt.Printf("\033[33m\nProposed changes for %s:\033[0m\n", filename)
-		fmt.Println("-----------------------------------")
-		fmt.Printf("\033[31mOriginal:\033[0m\n\n%s\n", string(data))
-		fmt.Printf("\033[32mFormatted:\033[0m\n\n%s\n", string(formattedData))
-		fmt.Println("-----------------------------------")
+		fmt.Printf("\n\033[33mProposed changes for %s:\033[0m\n", filename)
+		fmt.Println(strings.Repeat("=", 50))
+		fmt.Println(formatDiff(diffStr))
+		fmt.Println(strings.Repeat("=", 50))
+
+		return countChanges(diffStr)
 	} else {
 		fmt.Printf("\033[32mNo changes needed for %s\n\033[0m", filename)
+		return 0
 	}
 }
+
+func formatDiff(diff string) string {
+	var formattedDiff strings.Builder
+
+	for _, line := range strings.Split(diff, "\n") {
+		switch {
+		case strings.HasPrefix(line, "+"):
+			formattedDiff.WriteString("\033[32m" + line + "\033[0m")
+		case strings.HasPrefix(line, "-"):
+			formattedDiff.WriteString("\033[31m" + line + "\033[0m")
+		default:
+			formattedDiff.WriteString(line)
+		}
+
+		formattedDiff.WriteString("\n")
+	}
+
+	return formattedDiff.String()
+}
+
+func countChanges(diff string) int {
+	count := 0
+	for _, line := range strings.Split(diff, "\n") {
+		if strings.HasPrefix(line, "+") || strings.HasPrefix(line, "-") {
+			if !strings.HasPrefix(line, "+++") && !strings.HasPrefix(line, "---") {
+				count++
+			}
+		}
+	}
+	return count
+}
+
