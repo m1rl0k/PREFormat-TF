@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/pmezard/go-difflib/difflib"
+        "github.com/hashicorp/hcl/v2/hclparse"
 )
 
 func main() {
