@@ -86,6 +86,47 @@ func processTerraformFile(filename string) {
 		fmt.Printf("No changes needed for %s\n", filename)
 	}
 }
+func writeBlock(block *hcl.Block) hclwrite.Block {
+	body := hclwrite.NewBody()
+	body.AppendNewline()
+
+	blockType := block.Type
+	blockTypeToken := hclwrite.Token{
+		Type:  hclwrite.TokenIdent,
+		Bytes: []byte(blockType),
+	}
+	body.Append(blockTypeToken)
+
+	label := block.Labels[0]
+	if len(label) > 0 {
+		labelTokens := tokensForLabel(label)
+		body.AppendTokens(labelTokens)
+	}
+
+	body.AppendNewline()
+	body.AppendString("{")
+	body.AppendNewline()
+
+	for _, block := range block.Blocks {
+		childBlock := writeBlock(block)
+		body.AppendBlock(childBlock)
+	}
+
+	for _, attr := range block.Attributes {
+		attrTokens := tokensForAttr(attr, nil)
+		body.AppendTokens(attrTokens)
+	}
+
+	body.AppendString("}")
+	body.AppendNewline()
+
+	return hclwrite.Block{
+		Labels: block.Labels,
+		Type:   block.Type,
+		Body:   body,
+	}
+}
+
 func tokensForExpr(expr hcl.Expression, f *hcl.File) hclwrite.Tokens {
 	var tokens hclwrite.Tokens
 
