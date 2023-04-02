@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/pmezard/go-difflib/difflib"
@@ -35,7 +34,7 @@ func processTerraformFile(filename string) {
 	}
 
 	parser := hclparse.NewParser()
-	f, diags := parser.ParseHCL(data, filename)
+	_, diags := parser.ParseHCL(data, filename)
 	if diags.HasErrors() {
 		fmt.Println("Error parsing file:", filename, diags)
 		return
