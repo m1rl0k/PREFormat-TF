@@ -101,6 +101,17 @@ func writeBlock(block *hcl.Block, body *hclwrite.Body) {
 		writeBlock(subBlock, newBlock.Body())
 	}
 }
+func tokensForAttr(attr *hclsyntax.Attribute, f *hcl.File) hclwrite.Tokens {
+	var tokens hclwrite.Tokens
+
+	tokens = append(tokens, hclwrite.Token{
+		Type:  hclwrite.TokenIdent,
+		Bytes: []byte(attr.Name),
+	})
+
+	return tokens
+}
+
 
 func tokensForExpr(expr hcl.Expression, f *hcl.File) hclwrite.Tokens {
 	var tokens hclwrite.Tokens
@@ -176,13 +187,14 @@ func tokensForExpr(expr hcl.Expression, f *hcl.File) hclwrite.Tokens {
 					Type:  hclwrite.TokenDot,
 					Bytes: []byte("."),
 				})
-				tokens = append(tokens, tokensForAttr(sel, f)...)
+				tokens = append(tokens, tokensForAttr(expr, f)...)
 
 			case *hcl.TraverseIndex:
 				tokens = append(tokens, hclwrite.Token{
 					Type:  hclwrite.TokenOBrack,
 					Bytes: []byte("["),
-				})
+				
+})
 				indexTokens := tokensForExpr(sel.Key, f)
 				tokens = append(tokens, indexTokens...)
 				tokens = append(tokens, hclwrite.Token{
