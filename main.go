@@ -88,13 +88,27 @@ func processTerraformFile(filename string) {
 }
 func tokensForExpr(expr hcl.Expression) hclwrite.Tokens {
 	var tokens hclwrite.Tokens
-	for _, s := range hclsyntax.EncodeExpression(hclsyntax.Expression(expr)) {
-		t := hclwrite.Token{
-			Type:  hclwrite.TokenString,
-			Bytes: []byte(s),
+	syntaxNode := hclsyntax.ParseExpr(expr.(*hcl.Block).Type)
+	exprSyntaxNode, ok := syntaxNode.(*hclsyntax.ScopeTraversalExpr)
+	if !ok {
+		// If the expression is not a scope traversal, then it must be an
+		// index or attribute access. We can just return the raw expression.
+		tokens = hclwrite.Tokens{
+			{
+				Type:  hclwrite.TokenString,
+				Bytes: []byte(expr.Range().Text),
+			},
 		}
-		tokens = append(tokens, &t)
+		return tokens
+	}
+	for _, s := range hclsyntax.EncodeExpression(exprSyntaxNode) {
+		t := hclwrite.Token{
+			Type:  hclwrite.TokenType(s.TokenType),
+			Bytes: s.Bytes,
+		}
+		tokens = append(tokens, t)
 	}
 	return tokens
 }
+
 
