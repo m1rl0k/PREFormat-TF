@@ -147,9 +147,8 @@ func tokensForExpr(expr hcl.Expression, f *hcl.File) hclwrite.Tokens {
 			Bytes: []byte("$"),
 		})
 
-		attrTokens := tokensForAttr(expr, f)
-		tokens = append(tokens, attrTokens...)
-
+		attrTokens := tokensForAttr(&hclsyntax.TraverseAttr{Name: expr.Name}, f)
+                tokens = append(tokens, attrTokens...)
 	case *hcl.FunctionCallExpr:
 		tokens = append(tokens, hclwrite.Token{
 			Type:  hclwrite.TokenIdent,
