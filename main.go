@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/fatih/color"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/pmezard/go-difflib/difflib"
@@ -51,17 +50,14 @@ func processTerraformFile(filename string) {
 			Context:  3,
 		}
 		diffStr, _ := difflib.GetUnifiedDiffString(diff)
-		color.HiYellow(diffStr)
+		fmt.Printf("\033[33m%s\033[0m", diffStr)
 
-		red := color.New(color.FgRed).SprintFunc()
-		green := color.New(color.FgGreen).SprintFunc()
-
-		color.HiYellow("\nProposed changes for %s:", filename)
+		fmt.Printf("\033[33m\nProposed changes for %s:\033[0m\n", filename)
 		fmt.Println("-----------------------------------")
-		fmt.Printf("%s\n\n%s\n", red("Original:"), string(data))
-		fmt.Printf("%s\n\n%s\n", green("Formatted:"), string(formattedData))
+		fmt.Printf("\033[31mOriginal:\033[0m\n\n%s\n", string(data))
+		fmt.Printf("\033[32mFormatted:\033[0m\n\n%s\n", string(formattedData))
 		fmt.Println("-----------------------------------")
 	} else {
-		color.HiGreen("No changes needed for %s\n", filename)
+		fmt.Printf("\033[32mNo changes needed for %s\n\033[0m", filename)
 	}
 }
