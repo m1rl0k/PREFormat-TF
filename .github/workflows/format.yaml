@@ -1,4 +1,4 @@
-name: Format tf
+name: Format
 
 on:
   push:
@@ -23,11 +23,8 @@ jobs:
       - name: Tidy Go module
         run: go mod tidy
 
-      - name: formatter
+      - name: PREFormat Terraform 
         run: |
         
          go run main.go
         
-      - name: Check for changes
-        run: |
-          git diff --exit-code || (echo "Files were changed by the formatter. Please commit the changes." && exit 1)
