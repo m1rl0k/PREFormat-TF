@@ -53,9 +53,13 @@ func processTerraformFile(filename string) {
 		diffStr, _ := difflib.GetUnifiedDiffString(diff)
 		color.HiYellow(diffStr)
 
+		red := color.New(color.FgRed).SprintFunc()
+		green := color.New(color.FgGreen).SprintFunc()
+
 		color.HiYellow("\nProposed changes for %s:", filename)
 		fmt.Println("-----------------------------------")
-		fmt.Println(string(formattedData))
+		fmt.Printf("%s\n\n%s\n", red("Original:"), string(data))
+		fmt.Printf("%s\n\n%s\n", green("Formatted:"), string(formattedData))
 		fmt.Println("-----------------------------------")
 	} else {
 		color.HiGreen("No changes needed for %s\n", filename)
