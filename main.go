@@ -8,6 +8,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/hashicorp/hcl/v2"
+        "github.com/hashicorp/hcl/v2/hclparse"	
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/pmezard/go-difflib/difflib"
