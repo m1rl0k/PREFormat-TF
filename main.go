@@ -8,9 +8,9 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/pmezard/go-difflib/difflib"
-        "github.com/hashicorp/hcl/v2/hclparse"
 )
 
 func main() {
@@ -51,7 +51,7 @@ func processTerraformFile(filename string) {
 	}
 
 	for name, attr := range content.Attributes {
-		tokens := tokensForExpr(attr.Expr)
+		tokens := tokensForExpr(attr.Expr, f)
 		newBody.SetAttributeRaw(name, tokens)
 	}
 
@@ -59,7 +59,7 @@ func processTerraformFile(filename string) {
 		newBlock := newBody.AppendNewBlock(block.Type, block.Labels)
 		blockContent, _ := block.Body.Content(&hcl.BodySchema{})
 		for name, bAttr := range blockContent.Attributes {
-			tokens := tokensForExpr(bAttr.Expr)
+			tokens := tokensForExpr(bAttr.Expr, f)
 			newBlock.Body().SetAttributeRaw(name, tokens)
 		}
 	}
