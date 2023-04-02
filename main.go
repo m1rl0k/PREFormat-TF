@@ -118,7 +118,7 @@ func tokensForExpr(expr hcl.Expression, f *hcl.File) hclwrite.Tokens {
 
 	switch expr := expr.(type) {
 	case *hclsyntax.LiteralValueExpr:
-		tokens = append(tokens, hclwrite.NewToken(hclwrite.TokenString, []byte(expr.Val.AsBigFloat().String())))
+		tokens = append(tokens, hclwrite.Token{Type: hclwrite.TokenString, Bytes: []byte(expr.Val.AsBigFloat().String())})
 
 	case *hclsyntax.TemplateExpr:
 		parts := expr.Parts
@@ -131,12 +131,12 @@ func tokensForExpr(expr hcl.Expression, f *hcl.File) hclwrite.Tokens {
 				tokens = append(tokens, tokensForExpr(part.Wrapped, f)...)
 
 			case *hclsyntax.LiteralValueExpr:
-				tokens = append(tokens, hclwrite.NewToken(hclwrite.TokenString, []byte(part.Val.AsBigFloat().String())))
+				tokens = append(tokens, hclwrite.Token{Type: hclwrite.TokenString, Bytes: []byte(part.Val.AsBigFloat().String())})
 			}
 		}
 
 	case *hclsyntax.VariableExpr:
-		tokens = append(tokens, hclwrite.NewToken(hclwrite.TokenIdent, []byte("$")))
+		tokens = append(tokens, hclwrite.Token{Type: hclwrite.TokenIdent, Bytes: []byte("$")})
 
 		attrTokens := tokensForAttr(&hclsyntax.TraverseAttr{Name: expr.Name}, f)
 		tokens = append(tokens, attrTokens...)
@@ -145,4 +145,5 @@ func tokensForExpr(expr hcl.Expression, f *hcl.File) hclwrite.Tokens {
 
 	return tokens
 }
+
 
